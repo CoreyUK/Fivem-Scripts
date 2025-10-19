@@ -16,26 +16,47 @@ local function GetVehicleWheelCount(vehicle)
     return rawCount > 4 and 4 or rawCount
 end
 
--- Determine vehicle drivetrain type (FWD, RWD, AWD)
+-- Determine vehicle drivetrain type (FWD, RWD, AWD) based on fDriveBiasFront
 local function GetDrivetrainType(vehicle)
-    if not DoesEntityExist(vehicle) then return "AWD" end
-    local drivetrainType = GetVehicleDriveTrainType and GetVehicleDriveTrainType(vehicle) or 1
-    if drivetrainType == 1 then return "FWD"
-    elseif drivetrainType == 0 then return "RWD"
-    else return "AWD" end
+    if not DoesEntityExist(vehicle) then return "AWD" end -- Fallback
+
+    -- Attempt to get the drive bias value (0.0 to 1.0) using FiveM's handling native
+    local driveBias = GetVehicleHandlingFloat(vehicle, 'CHandlingData', 'fDriveBiasFront')
+
+    if driveBias == nil or driveBias < 0.0 or driveBias > 1.0 then
+        -- Fallback to the original logic if handling data is unavailable or invalid
+        local drivetrainType = GetVehicleDriveTrainType and GetVehicleDriveTrainType(vehicle) or 1
+        if drivetrainType == 1 then return "FWD"
+        elseif drivetrainType == 0 then return "RWD"
+        else return "AWD" end
+    end
+
+    -- Apply the custom bias logic:
+    -- Bias: 0.0 is pure RWD, 1.0 is pure FWD.
+    if driveBias < 0.5 then
+        -- 0.0 to 0.499...: RWD (Bias favors the rear)
+        return "RWD"
+    elseif driveBias == 0.5 then
+        -- Exactly 0.5: AWD (Perfect 50/50 split)
+        return "AWD"
+    else -- driveBias > 0.5
+        -- 0.500...1 to 1.0: FWD (Bias favors the front)
+        return "FWD"
+    end
 end
 
 -- Calculate wear multiplier based on drivetrain
 local function GetWheelWearMultiplier(vehicle, wheelIndex)
     if not TyreWearConfig.ENABLE_DIFFERENTIAL_WEAR then return 1.0 end
     local drivetrain = GetDrivetrainType(vehicle)
-    local isFrontWheel = wheelIndex < 2
+    local isFrontWheel = wheelIndex < 2 -- Wheels 0,1 are front; 2,3 are rear
+    
     if drivetrain == "FWD" then
-        return isFrontWheel and 1.5 or 1.0
+        return isFrontWheel and 1.5 or 1.0 -- Front wheels wear more
     elseif drivetrain == "RWD" then
-        return not isFrontWheel and 1.5 or 1.0
+        return isFrontWheel and 1.0 or 1.5 -- Rear wheels wear more
     else
-        return 1.0
+        return 1.0 -- AWD: equal wear
     end
 end
 
@@ -93,7 +114,10 @@ Citizen.CreateThread(function()
             if GetPedInVehicleSeat(currentVehicle, -1) == playerPed and IsVehicleOnAllWheels(currentVehicle) then
                 local numWheels = GetVehicleWheelCount(currentVehicle)
                 local currentSpeed = GetEntitySpeed(currentVehicle) * 3.6
-                local degradationRate = TyreWearConfig.DEGRADATION_RATE or 0.0005
+                
+                -- UPDATED: Degradation rate for ~30 hours of driving at 100kph
+                local degradationRate = TyreWearConfig.DEGRADATION_RATE or 0.000009
+                
                 local maxHealth = TyreWearConfig.MAX_TYRE_HEALTH or 100.0
                 local offroadMultiplier = TyreWearConfig.ENABLE_OFFROAD_WEAR and IsVehicleOffRoad(currentVehicle) and (TyreWearConfig.OFFROAD_WEAR_MULTIPLIER or 2.5) or 1.0
                 local baseDegradation = currentSpeed * degradationRate
@@ -244,7 +268,6 @@ RegisterCommand('fixmytyres', function()
                 end
             end
         end
-        SetVehicleFixed(currentVehicle)
         local netId = VehToNet(currentVehicle)
         if netId ~= 0 then
             TriggerServerEvent('tyrewear:forceRepair', netId, maxHealth)
@@ -263,12 +286,14 @@ end, false)
 RegisterCommand('checkdeg', function()
     if currentVehicle ~= 0 then
         local numWheels = GetVehicleWheelCount(currentVehicle)
+        local drivetrain = GetDrivetrainType(currentVehicle)
         local message = {
             color = { 255, 255, 255 },
             args = {
                 "Tyre Status",
-                string.format("Degradation Rate: %.4f\nMax Health: %.1f\nDifferential Wear: %s\nOffroad Wear: %s\nOffroad Multiplier: %.2f\nRepair: %s",
-                    TyreWearConfig.DEGRADATION_RATE or 0.0005,
+                string.format("Drivetrain: %s\nDegradation Rate: %.7f\nMax Health: %.1f\nDifferential Wear: %s\nOffroad Wear: %s\nOffroad Multiplier: %.2f\nRepair: %s",
+                    drivetrain,
+                    TyreWearConfig.DEGRADATION_RATE or 0.000009,
                     TyreWearConfig.MAX_TYRE_HEALTH or 100.0,
                     TyreWearConfig.ENABLE_DIFFERENTIAL_WEAR and "Enabled" or "Disabled",
                     TyreWearConfig.ENABLE_OFFROAD_WEAR and "Enabled" or "Disabled",
@@ -278,8 +303,9 @@ RegisterCommand('checkdeg', function()
         }
         for i = 0, numWheels - 1 do
             local isBurst = IsVehicleTyreBurst(currentVehicle, i, true) or IsVehicleTyreBurst(currentVehicle, i, false)
-            message.args[#message.args + 1] = string.format("Wheel %s: %.2f%%, %s",
-                wheelNames[i + 1], (tyreDurability[i] or 100.0) / (TyreWearConfig.MAX_TYRE_HEALTH or 100.0) * 100, isBurst and "Popped" or "Intact")
+            local wearMult = GetWheelWearMultiplier(currentVehicle, i)
+            message.args[#message.args + 1] = string.format("Wheel %s: %.2f%% (%.1fx wear), %s",
+                wheelNames[i + 1], (tyreDurability[i] or 100.0) / (TyreWearConfig.MAX_TYRE_HEALTH or 100.0) * 100, wearMult, isBurst and "Popped" or "Intact")
         end
         TriggerEvent("chat:addMessage", message)
     end
