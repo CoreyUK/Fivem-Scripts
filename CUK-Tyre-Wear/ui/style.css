@@ -1,0 +1,140 @@
+/*
+ * NUI Tyre Wear UI Styles
+ * Updated to support flashing red and black for popped tires
+ */
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+}
+
+#tyre-wear-app {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px;
+    background-color: transparent;
+    border-radius: 12px;
+}
+
+#tyre-wear-app.hidden {
+    display: none;
+}
+
+#tyre-container {
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+    align-items: center;
+}
+
+/* All layouts use absolute grid positioning */
+#wheel-0 { grid-column: 1; }
+#wheel-1 { grid-column: 2; }
+#wheel-2 { grid-column: 1; }
+#wheel-3 { grid-column: 2; }
+#wheel-4 { grid-column: 1; }
+#wheel-5 { grid-column: 2; }
+#wheel-6 { grid-column: 1; }
+#wheel-7 { grid-column: 2; }
+
+/* Vehicle-specific grid rules */
+#tyre-container.car #wheel-0 { grid-row: 1; }
+#tyre-container.car #wheel-1 { grid-row: 1; }
+#tyre-container.car #wheel-2 { grid-row: 2; }
+#tyre-container.car #wheel-3 { grid-row: 2; }
+#tyre-container.car #wheel-4,
+#tyre-container.car #wheel-5,
+#tyre-container.car #wheel-6,
+#tyre-container.car #wheel-7 {
+    display: none;
+}
+
+#tyre-container.bike #wheel-0 { grid-row: 1; grid-column: 1; }
+#tyre-container.bike #wheel-1 { grid-row: 2; grid-column: 1; }
+#tyre-container.bike #wheel-2,
+#tyre-container.bike #wheel-3,
+#tyre-container.bike #wheel-4,
+#tyre-container.bike #wheel-5,
+#tyre-container.bike #wheel-6,
+#tyre-container.bike #wheel-7 {
+    display: none;
+}
+
+#tyre-container.six #wheel-0 { grid-row: 1; }
+#tyre-container.six #wheel-1 { grid-row: 1; }
+#tyre-container.six #wheel-2 { grid-row: 2; }
+#tyre-container.six #wheel-3 { grid-row: 2; }
+#tyre-container.six #wheel-4 { grid-row: 3; }
+#tyre-container.six #wheel-5 { grid-row: 3; }
+#tyre-container.six #wheel-6,
+#tyre-container.six #wheel-7 {
+    display: none;
+}
+
+#tyre-container.eight #wheel-0 { grid-row: 1; }
+#tyre-container.eight #wheel-1 { grid-row: 1; }
+#tyre-container.eight #wheel-2 { grid-row: 2; }
+#tyre-container.eight #wheel-3 { grid-row: 2; }
+#tyre-container.eight #wheel-4 { grid-row: 3; }
+#tyre-container.eight #wheel-5 { grid-row: 3; }
+#tyre-container.eight #wheel-6 { grid-row: 4; }
+#tyre-container.eight #wheel-7 { grid-row: 4; }
+
+/* Wheel box appearance */
+.wheel-box {
+    width: 30px;
+    height: 80px;
+    border-radius: 6px;
+    background-color: rgba(17,24,39,0.7); /* Dark background when unfilled */
+    border: 2px solid rgba(255,255,255,0.1);
+    justify-content: center;
+    align-items: center;
+    font-weight: 700;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    transition: background-color 0.3s ease-in-out;
+    display: flex; /* Ensure visibility */
+}
+
+/* Fill element for non-popped tires */
+.wheel-box::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--fill-height, 100%);
+    background-color: var(--fill-color);
+    z-index: 1;
+    border-radius: 4px;
+    transition: height 0.3s ease-in-out;
+}
+
+/* Flashing animation for popped tires */
+.wheel-box[data-popped="true"] {
+    background-color: #000000; /* Base black for flashing */
+    color: #fff; /* White text for "Popped" */
+}
+
+.wheel-box[data-popped="true"]::before {
+    height: 0% !important; /* No fill for popped tires */
+}
+
+.wheel-box.flashing-popped {
+    animation: flashRedBlack 1s infinite;
+}
+
+@keyframes flashRedBlack {
+    0% { background-color: #ef4444; } /* Red */
+    50% { background-color: #000000; } /* Black */
+    100% { background-color: #ef4444; } /* Red */
+}
+
+/* Remove redundant .tyre-hidden */
+.wheel-box.tyre-hidden {
+    display: none !important; /* Kept for non-car wheels (e.g., wheel-4 to wheel-7) */
+}
