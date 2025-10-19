@@ -2,16 +2,6 @@
 -- SERVER SIDE LOGIC: Data Persistence and Synchronization
 -- ===================================================================
 
--- Attempt to fetch the shared configuration table.
-local Config = TyreWearConfig or {
-    DEGRADATION_RATE = 0.0005,
-    MAX_TYRE_HEALTH = 100.0,
-    ENABLE_DIFFERENTIAL_WEAR = false,
-    ENABLE_TYRE_REPAIR = true, -- Ensure repair is enabled
-    DEBUG_MODE = true,
-    REPAIR_COST = 500,
-}
-
 -- Dictionary to store durability data for vehicles in the world
 -- Key: Net ID of the vehicle
 -- Value: Table containing { [wheelIndex] = durabilityValue }
@@ -143,4 +133,5 @@ AddEventHandler('entityRemoved', function(entity)
             end
         end
     end
+
 end)
