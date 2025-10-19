@@ -8,6 +8,9 @@ local tyreDisplayActive = false
 local wheelNames = { "FL", "FR", "RL", "RR", "M1L", "M1R", "M2L", "M2R" }
 local isRepairing = false -- Prevents degradation during repair
 local MAX_BURST_ATTEMPTS = 3 -- Max burst attempts for rear wheels
+local inRepairArea = false
+local currentRepairArea = nil
+local repairBlips = {}
 
 -- Get number of vehicle wheels (capped at 4)
 local function GetVehicleWheelCount(vehicle)
@@ -105,6 +108,189 @@ local function updateUI()
     })
 end
 
+-- Repair tires function
+local function RepairTires()
+    if currentVehicle == 0 then return end
+    
+    isRepairing = true
+    
+    -- Store original position and rotation
+    local liftHeight = 0.4 -- Height to lift (in meters) - increased for visibility
+    local originalCoords = GetEntityCoords(currentVehicle)
+    local originalRotation = GetEntityRotation(currentVehicle)
+    local originalVelocity = GetEntityVelocity(currentVehicle)
+    
+    -- Fully freeze the vehicle
+    FreezeEntityPosition(currentVehicle, true)
+    SetEntityCollision(currentVehicle, false, false)
+    SetEntityVelocity(currentVehicle, 0.0, 0.0, 0.0)
+    
+    -- Gradually lift the vehicle
+    local liftSteps = 20
+    local stepDelay = 30
+    for i = 1, liftSteps do
+        local progress = i / liftSteps
+        local newZ = originalCoords.z + (liftHeight * progress)
+        SetEntityCoordsNoOffset(currentVehicle, originalCoords.x, originalCoords.y, newZ, true, true, true)
+        SetEntityRotation(currentVehicle, originalRotation.x, originalRotation.y, originalRotation.z, 2, true)
+        Citizen.Wait(stepDelay)
+    end
+    
+    -- Keep it lifted for repair duration
+    local repairDuration = TyreWearConfig.REPAIR_TIME or 5000
+    local adjustedDuration = repairDuration - (liftSteps * stepDelay * 2) -- Account for lift/lower time
+    if adjustedDuration > 0 then
+        Citizen.Wait(adjustedDuration)
+    end
+    
+    -- Repair the tires while lifted
+    local numWheels = GetVehicleWheelCount(currentVehicle)
+    local maxHealth = TyreWearConfig.MAX_TYRE_HEALTH or 100.0
+    
+    for i = 0, numWheels - 1 do
+        tyreDurability[i] = maxHealth
+        burstState[i] = false
+        burstAttempts[i] = 0
+        if IsVehicleTyreBurst(currentVehicle, i, true) or IsVehicleTyreBurst(currentVehicle, i, false) then
+            SetVehicleTyreFixed(currentVehicle, i)
+            if i == 2 or i == 3 then
+                local altIndices = { i == 2 and 4 or 5, 45, 46, 47, 48 }
+                for _, altIndex in ipairs(altIndices) do
+                    SetVehicleTyreFixed(currentVehicle, altIndex)
+                end
+            end
+        end
+    end
+    
+    -- Gradually lower the vehicle
+    for i = liftSteps, 0, -1 do
+        local progress = i / liftSteps
+        local newZ = originalCoords.z + (liftHeight * progress)
+        SetEntityCoordsNoOffset(currentVehicle, originalCoords.x, originalCoords.y, newZ, true, true, true)
+        SetEntityRotation(currentVehicle, originalRotation.x, originalRotation.y, originalRotation.z, 2, true)
+        Citizen.Wait(stepDelay)
+    end
+    
+    -- Restore vehicle to original state
+    SetEntityCoordsNoOffset(currentVehicle, originalCoords.x, originalCoords.y, originalCoords.z, true, true, true)
+    SetEntityRotation(currentVehicle, originalRotation.x, originalRotation.y, originalRotation.z, 2, true)
+    SetEntityCollision(currentVehicle, true, true)
+    FreezeEntityPosition(currentVehicle, false)
+    
+    -- Apply a small downward velocity to ensure it settles on the ground
+    SetEntityVelocity(currentVehicle, 0.0, 0.0, -0.5)
+    
+    local netId = VehToNet(currentVehicle)
+    if netId ~= 0 then
+        TriggerServerEvent('tyrewear:forceRepair', netId, maxHealth)
+    end
+    
+    updateUI()
+    isRepairing = false
+end
+
+-- Initialize repair area blips
+Citizen.CreateThread(function()
+    if not TyreWearConfig.SHOW_REPAIR_BLIPS then return end
+    
+    for i, area in ipairs(TyreWearConfig.REPAIR_AREAS) do
+        if area.blip and area.blip.enabled then
+            local blip = AddBlipForCoord(area.coords.x, area.coords.y, area.coords.z)
+            SetBlipSprite(blip, area.blip.sprite)
+            SetBlipDisplay(blip, 4)
+            SetBlipScale(blip, area.blip.scale)
+            SetBlipColour(blip, area.blip.color)
+            SetBlipAsShortRange(blip, true)
+            BeginTextCommandSetBlipName("STRING")
+            AddTextComponentString(area.name)
+            EndTextCommandSetBlipName(blip)
+            repairBlips[i] = blip
+        end
+    end
+end)
+
+-- Check if player is in repair area
+local function IsInRepairArea()
+    local playerPed = PlayerPedId()
+    local playerCoords = GetEntityCoords(playerPed)
+    
+    for _, area in ipairs(TyreWearConfig.REPAIR_AREAS) do
+        local distance = #(playerCoords - area.coords)
+        if distance <= area.radius then
+            return true, area
+        end
+    end
+    
+    return false, nil
+end
+
+-- Repair area detection and prompt thread
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+        
+        if currentVehicle ~= 0 then
+            local wasInArea = inRepairArea
+            inRepairArea, currentRepairArea = IsInRepairArea()
+            
+            if inRepairArea then
+                -- Show prompt
+                BeginTextCommandDisplayHelp("STRING")
+                AddTextComponentString(TyreWearConfig.REPAIR_PROMPT_TEXT)
+                EndTextCommandDisplayHelp(0, false, true, -1)
+                
+                -- Check for key press
+                if IsControlJustReleased(0, TyreWearConfig.REPAIR_PROMPT_KEY) and not isRepairing then
+                    -- Check if player can afford repair
+                    if TyreWearConfig.REPAIR_COST and TyreWearConfig.REPAIR_COST > 0 then
+                        -- Trigger server event to check and deduct money
+                        TriggerServerEvent('tyrewear:requestRepair', TyreWearConfig.REPAIR_COST)
+                    else
+                        -- Free repair
+                        BeginTextCommandDisplayHelp("STRING")
+                        AddTextComponentString(TyreWearConfig.REPAIR_IN_PROGRESS_TEXT)
+                        EndTextCommandDisplayHelp(0, false, true, TyreWearConfig.REPAIR_TIME)
+                        
+                        RepairTires()
+                        
+                        TriggerEvent("chat:addMessage", {
+                            color = { 52, 211, 153 },
+                            args = {"Tyre Change", TyreWearConfig.REPAIR_COMPLETE_TEXT}
+                        })
+                    end
+                end
+            else
+                Citizen.Wait(500)
+            end
+        else
+            Citizen.Wait(1000)
+        end
+    end
+end)
+
+-- Handle repair response from server
+RegisterNetEvent('tyrewear:repairApproved')
+AddEventHandler('tyrewear:repairApproved', function()
+    BeginTextCommandDisplayHelp("STRING")
+    AddTextComponentString(TyreWearConfig.REPAIR_IN_PROGRESS_TEXT)
+    EndTextCommandDisplayHelp(0, false, true, TyreWearConfig.REPAIR_TIME)
+    
+    RepairTires()
+    
+    TriggerEvent("chat:addMessage", {
+        color = { 52, 211, 153 },
+        args = {"Tyre Change", TyreWearConfig.REPAIR_COMPLETE_TEXT}
+    })
+end)
+
+RegisterNetEvent('tyrewear:repairDenied')
+AddEventHandler('tyrewear:repairDenied', function()
+    TriggerEvent("chat:addMessage", {
+        color = { 255, 87, 87 },
+        args = {"Tyre Change", TyreWearConfig.REPAIR_INSUFFICIENT_FUNDS_TEXT}
+    })
+end)
+
 -- Main simulation loop: Degrade tires and handle bursts
 Citizen.CreateThread(function()
     while true do
@@ -115,7 +301,6 @@ Citizen.CreateThread(function()
                 local numWheels = GetVehicleWheelCount(currentVehicle)
                 local currentSpeed = GetEntitySpeed(currentVehicle) * 3.6
                 
-                -- UPDATED: Degradation rate for ~30 hours of driving at 100kph
                 local degradationRate = TyreWearConfig.DEGRADATION_RATE or 0.000009
                 
                 local maxHealth = TyreWearConfig.MAX_TYRE_HEALTH or 100.0
@@ -247,38 +432,15 @@ AddEventHandler('tyrewear:receiveDurability', function(netId, durabilityTable)
     end
 end)
 
--- Repair command: Restore all tires
+-- Repair command: Restore all tires (kept for backwards compatibility)
 RegisterCommand('fixmytyres', function()
     if not TyreWearConfig.ENABLE_TYRE_REPAIR then return end
     if currentVehicle ~= 0 then
-        isRepairing = true
-        local numWheels = GetVehicleWheelCount(currentVehicle)
-        local maxHealth = TyreWearConfig.MAX_TYRE_HEALTH or 100.0
-        for i = 0, numWheels - 1 do
-            tyreDurability[i] = maxHealth
-            burstState[i] = false
-            burstAttempts[i] = 0
-            if IsVehicleTyreBurst(currentVehicle, i, true) or IsVehicleTyreBurst(currentVehicle, i, false) then
-                SetVehicleTyreFixed(currentVehicle, i)
-                if i == 2 or i == 3 then
-                    local altIndices = { i == 2 and 4 or 5, 45, 46, 47, 48 }
-                    for _, altIndex in ipairs(altIndices) do
-                        SetVehicleTyreFixed(currentVehicle, altIndex)
-                    end
-                end
-            end
-        end
-        local netId = VehToNet(currentVehicle)
-        if netId ~= 0 then
-            TriggerServerEvent('tyrewear:forceRepair', netId, maxHealth)
-        end
-        updateUI()
+        RepairTires()
         TriggerEvent("chat:addMessage", {
             color = { 52, 211, 153 },
             args = {"Tyres Repaired!", "Your tires are now 100% durable."}
         })
-        Citizen.Wait(1000)
-        isRepairing = false
     end
 end, false)
 
