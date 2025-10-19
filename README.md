@@ -22,4 +22,6 @@ A **realistic tire wear system** for FiveM, adding dynamic tire degradation and 
 
 Currently a W.I.P
 
-![Vehicle HUD](https://github.com/CoreyUK/Fivem-Scripts/blob/main/CUK-Tyre-Wear/assets/car.png)
+[Vehicle HUD](https://github.com/CoreyUK/Fivem-Scripts/blob/main/CUK-Tyre-Wear/assets/car.png)
+[Popped HUD](https://github.com/CoreyUK/Fivem-Scripts/blob/main/CUK-Tyre-Wear/assets/popped.png)
+[Bike HUD](https://github.com/CoreyUK/Fivem-Scripts/blob/main/CUK-Tyre-Wear/assets/bike.png)
