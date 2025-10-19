@@ -1,6 +1,6 @@
 /*
  * NUI Tyre Wear UI Styles
- * Updated to support flashing red and black for popped tires
+ * Updated to support full tyre fill with color changes only
  */
 
 body {
@@ -88,7 +88,7 @@ body {
     width: 30px;
     height: 80px;
     border-radius: 6px;
-    background-color: rgba(17,24,39,0.7); /* Dark background when unfilled */
+    background-color: var(--fill-color, rgba(17,24,39,0.7)); /* Background is now the fill color */
     border: 2px solid rgba(255,255,255,0.1);
     justify-content: center;
     align-items: center;
@@ -97,31 +97,18 @@ body {
     position: relative;
     overflow: hidden;
     transition: background-color 0.3s ease-in-out;
-    display: flex; /* Ensure visibility */
+    display: flex;
 }
 
-/* Fill element for non-popped tires */
+/* Remove the ::before pseudo-element since we're using background-color for full fill */
 .wheel-box::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: var(--fill-height, 100%);
-    background-color: var(--fill-color);
-    z-index: 1;
-    border-radius: 4px;
-    transition: height 0.3s ease-in-out;
+    display: none;
 }
 
 /* Flashing animation for popped tires */
 .wheel-box[data-popped="true"] {
     background-color: #000000; /* Base black for flashing */
-    color: #fff; /* White text for "Popped" */
-}
-
-.wheel-box[data-popped="true"]::before {
-    height: 0% !important; /* No fill for popped tires */
+    color: #fff;
 }
 
 .wheel-box.flashing-popped {
@@ -136,5 +123,5 @@ body {
 
 /* Remove redundant .tyre-hidden */
 .wheel-box.tyre-hidden {
-    display: none !important; /* Kept for non-car wheels (e.g., wheel-4 to wheel-7) */
+    display: none !important;
 }
