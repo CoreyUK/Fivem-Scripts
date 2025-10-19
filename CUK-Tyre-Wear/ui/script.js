@@ -9,7 +9,6 @@ let debounceTimer;
 const DEBOUNCE_TIME = 100; // Milliseconds
 
 // Style constants
-const baseBgColor = 'rgba(17,24,39,0.7)';
 const pureBlack = '#000000';
 const transparent = 'transparent';
 
@@ -36,7 +35,7 @@ const processUpdate = (data) => {
         wheelEl.style.backgroundColor = '';
         wheelEl.style.color = '';
         wheelEl.style.setProperty('--fill-color', transparent);
-        wheelEl.style.setProperty('--fill-height', '0%');
+        wheelEl.style.setProperty('--fill-height', '100%'); // Always 100%
     }
 
     // Update visible wheels
@@ -56,22 +55,24 @@ const processUpdate = (data) => {
             wheelEl.style.backgroundColor = pureBlack;
             wheelEl.style.color = transparent;
             wheelEl.style.setProperty('--fill-color', transparent, 'important');
-            wheelEl.style.setProperty('--fill-height', '0%', 'important');
+            wheelEl.style.setProperty('--fill-height', '100%', 'important');
         } else {
-            // Style non-popped tire (fill bar with color gradient)
+            // Style non-popped tire (full fill with color based on degradation)
             wheelEl.classList.add('wheel-box');
             wheelEl.classList.remove('flashing-popped');
             wheelEl.style.display = '';
             wheelEl.textContent = '';
-            wheelEl.style.backgroundColor = baseBgColor;
+            wheelEl.style.backgroundColor = '';
             wheelEl.style.color = transparent;
             wheelEl.removeAttribute('data-popped');
 
-            let color = '#34d399'; // Green
-            if (percent < 70 && percent >= 30) color = '#f59e0b'; // Orange
-            else if (percent < 30 && percent > 0) color = '#ef4444'; // Red
+            // Color gradient based on percentage
+            let color = '#34d399'; // Green (100-70%)
+            if (percent < 70 && percent >= 30) color = '#f59e0b'; // Orange (69-30%)
+            else if (percent < 30 && percent > 0) color = '#ef4444'; // Red (29-1%)
+            
             wheelEl.style.setProperty('--fill-color', color);
-            wheelEl.style.setProperty('--fill-height', `${percent}%`);
+            wheelEl.style.setProperty('--fill-height', '100%'); // Always full height
         }
     }
 };
@@ -98,7 +99,7 @@ window.addEventListener('message', (event) => {
                     wheelEl.style.backgroundColor = '';
                     wheelEl.style.color = '';
                     wheelEl.style.setProperty('--fill-color', transparent);
-                    wheelEl.style.setProperty('--fill-height', '0%');
+                    wheelEl.style.setProperty('--fill-height', '100%');
                 }
             }
         }
