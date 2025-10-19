@@ -23,7 +23,7 @@ A **realistic tire wear system** for FiveM, adding dynamic tire degradation and 
 Currently a W.I.P
 
 
-[Tire Wear UI](fastdl.cukservers/images/car.png)
-[Tire Wear UI Popped](fastdl.cukservers/images/popped.png)
-[Tire Wear UI Bike](fastdl.cukservers/images/bike.png)
+[Tire Wear UI](fastdl.cukservers.net/images/car.png)
+[Tire Wear UI Popped](fastdl.cukservers.net/images/popped.png)
+[Tire Wear UI Bike](fastdl.cukservers.net/images/bike.png)
 
