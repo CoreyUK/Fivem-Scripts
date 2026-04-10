@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --accent:      #9b59f5;
+  --accent-glow: rgba(155,89,245,0.45);
+  --accent-dim:  rgba(155,89,245,0.13);
+  --bg:          rgba(10,10,12,0.92);
+  --border:      rgba(255,255,255,0.07);
+  --border-acc:  rgba(155,89,245,0.55);
+  --text:        #f0edf8;
+  --text-sec:    #8a849e;
+  --text-off:    #3e3a4a;
+  --green:       #68e08a;
+  --red:         #e06868;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Rajdhani', sans-serif;
+  pointer-events: none;
+}
+
+/* ── MENU ──────────────────────────────────────────────────────── */
+#menu-root {
+  position: fixed;
+  left: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 340px;
+  display: none;
+  pointer-events: auto;
+}
+
+.panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--border-acc);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.header-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  opacity: 0.8;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+.header-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  text-transform: uppercase;
+}
+.breadcrumb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-sec);
+  margin-top: 4px;
+  min-height: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hints {
+  display: flex;
+  gap: 12px;
+  padding: 7px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.2);
+}
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-sec);
+}
+.hint-key {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 9px;
+  color: var(--text);
+}
+
+.items { list-style: none; margin: 0; padding: 4px 0; }
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: 44px;
+  border-top: 1px solid var(--border);
+  position: relative;
+}
+.item:first-child { border-top: none; }
+.item.sel { background: var(--accent-dim); }
+.item.sel::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.item-icon {
+  width: 20px; flex-shrink: 0; margin-right: 12px;
+  opacity: 0.4; color: var(--text-sec);
+  display: flex; align-items: center;
+}
+.item.sel .item-icon { opacity: 1; color: var(--accent); }
+
+.item-label {
+  flex: 1;
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 0.05em; color: var(--text-sec);
+  text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.item.sel .item-label    { color: var(--text); }
+.item.danger .item-label { color: var(--red); }
+.item.sel.danger .item-label { color: #ff7070; }
+.item.disabled .item-label   { color: var(--text-off); font-style: italic; }
+
+.badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; padding: 2px 7px;
+  border-radius: 4px; border: 1px solid; flex-shrink: 0;
+}
+.on  { color: var(--green); border-color: rgba(104,224,138,0.3); background: rgba(104,224,138,0.08); }
+.off { color: var(--red);   border-color: rgba(224,104,104,0.3); background: rgba(224,104,104,0.08); }
+
+.arrow {
+  margin-left: 8px; color: var(--accent);
+  font-size: 14px; flex-shrink: 0;
+  opacity: 0;
+}
+.item.sel .arrow { opacity: 1; }
+
+.footer {
+  display: flex; justify-content: space-between;
+  padding: 7px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text-off);
+}
+.footer span { color: var(--accent); }
+
+/* ── SPEEDO ────────────────────────────────────────────────────── */
+#speedo {
+  position: fixed;
+  bottom: 50px; right: 50px;
+  width: 220px;
+  display: none;
+}
+
+.speedo-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-right: 2px solid var(--border-acc);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04);
+  padding: 14px 16px 10px;
+}
+
+.speedo-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.speedo-nums {
+  flex: 1;
+}
+.speedo-mph {
+  font-size: 52px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.speedo-unit {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-sec);
+  letter-spacing: 0.1em;
+}
+.speedo-kph {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-off);
+  margin-top: 2px;
+}
+.speedo-gear-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+}
+.speedo-gear-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text-sec); letter-spacing: 0.14em;
+}
+.speedo-gear-val {
+  font-size: 22px; font-weight: 700;
+  color: var(--accent); line-height: 1; min-width: 20px;
+}
+
+.speedo-bar-wrap { margin-top: 10px; }
+.speedo-bar-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 0.12em;
+  color: var(--text-off); margin-bottom: 3px;
+}
+.speedo-bar-track {
+  height: 3px; background: rgba(255,255,255,0.06);
+  border-radius: 2px; overflow: hidden;
+}
+.speedo-bar-fill {
+  height: 100%; border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  transition: width 0.4s ease, background 0.4s ease;
+  width: 100%;
+}
+
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="menu-root">
+  <div class="panel">
+    <div class="header">
+      <div class="header-tag">CUK // MENU</div>
+      <div class="header-title" id="header-title">MAIN</div>
+      <div class="breadcrumb" id="breadcrumb">&nbsp;</div>
+    </div>
+    <div class="hints">
+      <div class="hint"><span class="hint-key">↑↓</span> Navigate</div>
+      <div class="hint"><span class="hint-key">↵</span> Select</div>
+      <div class="hint"><span class="hint-key">⌫</span> Back</div>
+    </div>
+    <ul class="items" id="items-list"></ul>
+    <div class="footer">
+      <div id="footer-count"><span>0</span> / 0</div>
+      <div>M — CLOSE</div>
+    </div>
+  </div>
+</div>
+
+<!-- SPEEDO -->
+<div id="speedo">
+  <div class="speedo-panel">
+    <div class="speedo-top">
+      <canvas id="rpm-canvas" width="80" height="80" style="flex-shrink:0"></canvas>
+      <div class="speedo-nums">
+        <div class="speedo-mph" id="spd-mph">0</div>
+        <div class="speedo-unit">MPH</div>
+        <div class="speedo-kph" id="spd-kph">0 KPH</div>
+        <div class="speedo-gear-row">
+          <div class="speedo-gear-lbl">GEAR</div>
+          <div class="speedo-gear-val" id="spd-gear">1</div>
+        </div>
+      </div>
+    </div>
+    <div class="speedo-bar-wrap">
+      <div class="speedo-bar-lbl">ENGINE</div>
+      <div class="speedo-bar-track">
+        <div class="speedo-bar-fill" id="eng-bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Icons ──────────────────────────────────────────────────────────────────
+const ICONS = {
+  'Vehicles':         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h2l2-4h8l2 4h2a2 2 0 012 2v6a2 2 0 01-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>',
+  'Customization':    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
+  'Builds':           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+  'Warp to Waypoint': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
+  'Edit Character':   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  'Speedo':           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  'Passive':          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  'God Mode':         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  'Delete Vehicle':   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>',
+  'Body Shop':        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>',
+  'Stance':           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
+  'Lighting':         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  'Drift':            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l4-8 4 4 4-6 4 4"/><circle cx="19" cy="17" r="2"/><circle cx="5" cy="17" r="2"/></svg>',
+  'Max Perf':         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+  'Random Paint':     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>',
+  'Next Livery':      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 18 21 12 15 6"/><path d="M3 12h18"/></svg>',
+  'Repair':           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>',
+  'Save Car':         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+  'Toggle Underglow': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+  'Toggle Xenon':     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  'Lower Suspension': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="6 9 12 15 18 9"/></svg>',
+  'Stock Suspension': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+};
+function icon(label) {
+  return ICONS[label] || '<svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="2" fill="currentColor" opacity=".4"/></svg>';
+}
+
+// ── Menu state ─────────────────────────────────────────────────────────────
+const MAX_VIS = 11;
+const menuEl   = document.getElementById('menu-root');
+const titleEl  = document.getElementById('header-title');
+const bcEl     = document.getElementById('breadcrumb');
+const listEl   = document.getElementById('items-list');
+const countEl  = document.getElementById('footer-count');
+let state = { title:'MAIN', bc:'', items:[], sel:0 };
+
+function render() {
+  const { title, bc, items, sel } = state;
+  titleEl.textContent = title;
+  bcEl.textContent    = bc || '\u00a0';
+
+  const total = items.length;
+  const start = Math.max(0, Math.min(sel - Math.floor(MAX_VIS/2), total - MAX_VIS));
+  const end   = Math.min(start + MAX_VIS, total);
+
+  listEl.innerHTML = '';
+  items.slice(start, end).forEach((item, i) => {
+    const gi = start + i;
+    const li = document.createElement('li');
+    li.className = 'item'
+      + (gi === sel    ? ' sel'     : '')
+      + (item.danger   ? ' danger'  : '')
+      + (item.disabled ? ' disabled': '');
+
+    li.innerHTML =
+      '<div class="item-icon">' + icon(item.label) + '</div>' +
+      '<div class="item-label">' + item.label + '</div>' +
+      (item.badge !== undefined
+        ? '<span class="badge ' + (item.badgeOn ? 'on' : 'off') + '">' + (item.badgeOn ? 'ON' : 'OFF') + '</span>'
+        : '') +
+      (item.hasArrow ? '<span class="arrow">›</span>' : '');
+
+    listEl.appendChild(li);
+  });
+
+  countEl.innerHTML = '<span>' + (sel+1) + '</span> / ' + total;
+}
+
+// ── RPM canvas ─────────────────────────────────────────────────────────────
+const rpmCanvas = document.getElementById('rpm-canvas');
+const rpmCtx    = rpmCanvas.getContext('2d');
+const CX = 40, CY = 40, R = 32;
+const SA = Math.PI * 0.75, EA = Math.PI * 2.25;
+
+function drawRpm(rpm) {
+  rpmCtx.clearRect(0, 0, 80, 80);
+  rpmCtx.beginPath();
+  rpmCtx.arc(CX, CY, R, SA, EA);
+  rpmCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+  rpmCtx.lineWidth = 5; rpmCtx.lineCap = 'round';
+  rpmCtx.stroke();
+  if (rpm > 0.01) {
+    const hue = Math.round(270 - rpm * 150);
+    rpmCtx.beginPath();
+    rpmCtx.arc(CX, CY, R, SA, SA + (EA - SA) * Math.min(rpm, 1));
+    rpmCtx.strokeStyle = 'hsl(' + hue + ',85%,60%)';
+    rpmCtx.shadowColor = 'hsl(' + hue + ',85%,60%)';
+    rpmCtx.shadowBlur  = 10;
+    rpmCtx.stroke();
+    rpmCtx.shadowBlur  = 0;
+  }
+  rpmCtx.beginPath();
+  rpmCtx.arc(CX, CY, 3, 0, Math.PI*2);
+  rpmCtx.fillStyle = rpm > 0.85 ? '#ff6b4a' : 'rgba(155,89,245,0.8)';
+  rpmCtx.fill();
+}
+drawRpm(0);
+
+// ── Speedo state ───────────────────────────────────────────────────────────
+const speedoEl = document.getElementById('speedo');
+const mphEl    = document.getElementById('spd-mph');
+const kphEl    = document.getElementById('spd-kph');
+const gearEl   = document.getElementById('spd-gear');
+const engEl    = document.getElementById('eng-bar');
+let speedoEnabled = true;
+let inVehicle     = false;
+
+function updateSpeedoVis() {
+  speedoEl.style.display = (speedoEnabled && inVehicle) ? 'block' : 'none';
+}
+
+// ── Message handler ────────────────────────────────────────────────────────
+window.addEventListener('message', function(e) {
+  const msg = e.data;
+
+  // Menu visibility
+  if (msg.type === 'setVisible') {
+    menuEl.style.display = msg.visible ? 'block' : 'none';
+    return;
+  }
+
+  // Full menu rebuild
+  if (msg.type === 'setMenu') {
+    state.title = msg.title || 'MENU';
+    state.bc    = msg.breadcrumb || '';
+    state.items = msg.items || [];
+    state.sel   = (msg.selected || 1) - 1;
+    render();
+    return;
+  }
+
+  // Just move the selection highlight
+  if (msg.type === 'setSelected') {
+    state.sel = (msg.selected || 1) - 1;
+    render();
+    return;
+  }
+
+  // Speedo update — only show when in a vehicle
+  if (msg.type === 'setSpeedo') {
+    inVehicle = !!msg.inVehicle;
+    if (msg.speedoEnabled !== undefined) speedoEnabled = msg.speedoEnabled;
+    updateSpeedoVis();
+    if (msg.data) {
+      const d = msg.data;
+      mphEl.textContent  = Math.round(d.speed * 2.23694);
+      kphEl.textContent  = Math.round(d.speed * 3.6) + ' KPH';
+      const g = d.gear;
+      gearEl.textContent = g === 0 ? 'R' : (g === -1 ? 'N' : g);
+      const h = Math.max(0, Math.min(1, d.health / 1000));
+      engEl.style.width      = (h * 100) + '%';
+      engEl.style.background = h > 0.6 ? 'var(--accent)' : h > 0.3 ? '#e0a020' : '#e05252';
+      drawRpm(d.rpm || 0);
+    }
+    return;
+  }
+
+  // Speedo toggle from menu
+  if (msg.type === 'setSpeedoEnabled') {
+    speedoEnabled = msg.enabled;
+    updateSpeedoVis();
+    return;
+  }
+});
+</script>
+</body>
+</html>
