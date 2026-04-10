@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>CUK Trials</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --accent:     #9b59f5;
+  --accent-glow:rgba(155,89,245,0.4);
+  --accent-dim: rgba(155,89,245,0.12);
+  --bg:         rgba(10,10,12,0.92);
+  --border:     rgba(255,255,255,0.07);
+  --border-acc: rgba(155,89,245,0.55);
+  --text:       #f0edf8;
+  --text-sec:   #8a849e;
+  --text-off:   #3e3a4a;
+  --gold:       #f5c842;
+  --silver:     #b0b8c8;
+  --bronze:     #c8834a;
+  --green:      #68e08a;
+  --red:        #e06868;
+}
+html, body {
+  margin: 0; width: 100%; height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Rajdhani', sans-serif;
+  pointer-events: none;
+}
+
+/* ── LEADERBOARD ───────────────────────────────────────── */
+#leaderboard {
+  position: fixed;
+  right: 48px; top: 50%;
+  transform: translateY(-50%);
+  width: 320px;
+  display: none;
+}
+.panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-right: 2px solid var(--border-acc);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.lb-header { padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
+.lb-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 0.2em;
+  color: var(--accent); opacity: 0.8; margin-bottom: 3px; text-transform: uppercase;
+}
+.lb-title {
+  font-size: 18px; font-weight: 700; letter-spacing: 0.05em;
+  color: var(--text); text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lb-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text-sec); margin-top: 3px; letter-spacing: 0.08em;
+}
+.lb-rows { padding: 4px 0; }
+.lb-row {
+  display: flex; align-items: center;
+  padding: 0 18px; height: 46px;
+  border-top: 1px solid var(--border); gap: 10px;
+}
+.lb-row:first-child { border-top: none; }
+.lb-pos {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 500;
+  width: 18px; flex-shrink: 0; text-align: center;
+}
+.pos-1 { color: var(--gold); }
+.pos-2 { color: var(--silver); }
+.pos-3 { color: var(--bronze); }
+.pos-4, .pos-5 { color: var(--text-off); }
+.lb-info { flex: 1; min-width: 0; }
+.lb-name {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lb-car {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text-sec); letter-spacing: 0.06em; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lb-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  color: var(--accent); flex-shrink: 0; letter-spacing: 0.04em;
+}
+.lb-row:first-child .lb-time { color: var(--gold); }
+.lb-empty {
+  padding: 18px; text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--text-off); letter-spacing: 0.1em;
+}
+.lb-footer {
+  padding: 7px 18px; border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.lb-footer-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text-off); letter-spacing: 0.08em;
+}
+.lb-footer-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text-sec); letter-spacing: 0.06em;
+}
+.lb-footer-key span {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 3px; padding: 1px 5px;
+  color: var(--text); margin-right: 4px;
+}
+
+/* ── RACE HUD ──────────────────────────────────────────── */
+#race-hud {
+  position: fixed;
+  top: 50px; left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.hud-timer {
+  font-size: 44px; font-weight: 700;
+  color: var(--text); letter-spacing: 0.04em; line-height: 1;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+}
+.hud-deltas { display: flex; gap: 10px; }
+.hud-delta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 0.06em;
+  padding: 2px 10px; border-radius: 4px;
+  background: rgba(10,10,12,0.75);
+  border: 1px solid var(--border);
+  color: var(--green); border-color: rgba(104,224,138,0.3);
+}
+.hud-delta.behind { color: var(--red); border-color: rgba(224,104,104,0.3); }
+.hud-delta.wr { color: var(--gold); border-color: rgba(245,200,66,0.3); }
+
+/* ── FINISH SCREEN ─────────────────────────────────────── */
+#finish-screen {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px; display: none; pointer-events: none;
+}
+.finish-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04);
+  text-align: center; padding: 28px 32px 24px;
+}
+.finish-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.2em;
+  color: var(--text-sec); margin-bottom: 8px; text-transform: uppercase;
+}
+.finish-title {
+  font-size: 34px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; margin-bottom: 14px; line-height: 1;
+}
+.finish-title.complete { color: var(--green); }
+.finish-title.fail     { color: var(--red); }
+.finish-title.survival { color: var(--red); }
+.finish-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px; font-weight: 500;
+  color: var(--text); margin-bottom: 8px; letter-spacing: 0.04em;
+}
+.finish-car {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text-sec);
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.finish-pb {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--accent);
+  letter-spacing: 0.08em; margin-top: 10px;
+}
+
+/* ── COUNTDOWN ─────────────────────────────────────────── */
+#countdown {
+  position: fixed;
+  top: 40%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: none; pointer-events: none;
+}
+.countdown-num {
+  font-size: 120px; font-weight: 700;
+  color: var(--text);
+  text-shadow: 0 0 40px var(--accent-glow);
+  line-height: 1;
+  animation: countPulse 0.9s ease-out;
+}
+@keyframes countPulse {
+  0%   { transform: scale(1.4); opacity: 0.5; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ── PROMPT ────────────────────────────────────────────── */
+#prompt {
+  position: fixed;
+  bottom: 80px; left: 50%;
+  transform: translateX(-50%);
+  display: none; pointer-events: none;
+}
+.prompt-box {
+  background: rgba(10,10,12,0.85);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text-sec);
+  letter-spacing: 0.08em; white-space: nowrap;
+}
+.prompt-box span {
+  background: rgba(155,89,245,0.2);
+  border: 1px solid var(--border-acc);
+  border-radius: 3px; padding: 1px 6px;
+  color: var(--accent); margin: 0 3px; font-weight: 500;
+}
+</style>
+</head>
+<body>
+
+<!-- LEADERBOARD -->
+<div id="leaderboard">
+  <div class="panel">
+    <div class="lb-header">
+      <div class="lb-tag">CUK // TIME TRIALS</div>
+      <div class="lb-title" id="lb-title">TRIAL NAME</div>
+      <div class="lb-subtitle" id="lb-subtitle">TOP 5 LEADERBOARD</div>
+    </div>
+    <div class="lb-rows" id="lb-rows"></div>
+    <div class="lb-footer">
+      <div class="lb-footer-text">NEARBY TRIAL</div>
+      <div class="lb-footer-key"><span>E</span> TO START</div>
+    </div>
+  </div>
+</div>
+
+<!-- RACE HUD -->
+<div id="race-hud">
+  <div class="hud-timer" id="hud-timer">0:00.000</div>
+  <div class="hud-deltas" id="hud-deltas"></div>
+</div>
+
+<!-- FINISH SCREEN -->
+<div id="finish-screen">
+  <div class="finish-panel">
+    <div class="finish-label" id="finish-label">TIME TRIAL</div>
+    <div class="finish-title" id="finish-title">COMPLETE</div>
+    <div class="finish-time" id="finish-time">0:00.000</div>
+    <div class="finish-car"  id="finish-car"></div>
+    <div class="finish-pb"   id="finish-pb"></div>
+  </div>
+</div>
+
+<!-- COUNTDOWN -->
+<div id="countdown">
+  <div class="countdown-num" id="countdown-num">3</div>
+</div>
+
+<!-- CANCEL PROMPT (shown during active trial) -->
+<div id="cancel-prompt" style="position:fixed;bottom:120px;left:50%;transform:translateX(-50%);display:none;pointer-events:none;">
+  <div style="background:rgba(10,10,12,0.85);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px 18px;font-family:JetBrains Mono,monospace;font-size:11px;color:#8a849e;letter-spacing:0.08em;white-space:nowrap;">
+    <span style="background:rgba(224,104,104,0.2);border:1px solid rgba(224,104,104,0.4);border-radius:3px;padding:1px 6px;color:#e06868;margin:0 3px;font-weight:500;">X</span> TO CANCEL TRIAL
+  </div>
+</div>
+
+<!-- PROMPT -->
+<div id="prompt">
+  <div class="prompt-box" id="prompt-text"></div>
+</div>
+
+<script>
+function fmtTime(s) {
+  return Math.floor(s / 60) + ':' + (s % 60).toFixed(3).padStart(6, '0');
+}
+
+// ── Smooth timer interpolation ─────────────────────────────────────────────
+// Lua sends ticks every 50ms. We interpolate client-side at 60fps so the
+// timer appears to run smoothly rather than jumping every tick.
+var timerRunning   = false;
+var timerBase      = 0;   // time value received from Lua
+var timerBaseStamp = 0;   // performance.now() when that value arrived
+
+function getSmoothedTime() {
+  if (!timerRunning) return timerBase;
+  var elapsed = (performance.now() - timerBaseStamp) / 1000;
+  return timerBase + elapsed;
+}
+
+function tickTimer() {
+  if (timerRunning) {
+    document.getElementById('hud-timer').textContent = fmtTime(getSmoothedTime());
+  }
+  requestAnimationFrame(tickTimer);
+}
+requestAnimationFrame(tickTimer);
+
+// ── Leaderboard ──────────────────────────────────────────
+const lbEl    = document.getElementById('leaderboard');
+const lbTitle = document.getElementById('lb-title');
+const lbSub   = document.getElementById('lb-subtitle');
+const lbRows  = document.getElementById('lb-rows');
+
+function renderLB(title, isSurvival, entries) {
+  lbTitle.textContent = title;
+  lbSub.textContent   = isSurvival ? 'TOP 5 SURVIVORS' : 'TOP 5 FASTEST';
+  lbRows.innerHTML    = '';
+  if (!entries || entries.length === 0) {
+    lbRows.innerHTML = '<div class="lb-empty">NO TIMES SET YET</div>';
+    return;
+  }
+  var posClass = ['pos-1','pos-2','pos-3','pos-4','pos-5'];
+  entries.forEach(function(e, i) {
+    var row = document.createElement('div');
+    row.className = 'lb-row';
+    row.innerHTML =
+      '<div class="lb-pos ' + posClass[i] + '">' + (i+1) + '</div>' +
+      '<div class="lb-info">' +
+        '<div class="lb-name">' + e.player_name + '</div>' +
+        '<div class="lb-car">'  + (e.car_name || 'UNKNOWN') + '</div>' +
+      '</div>' +
+      '<div class="lb-time">' + fmtTime(e.time) + '</div>';
+    lbRows.appendChild(row);
+  });
+}
+
+// ── Race HUD ─────────────────────────────────────────────
+var hudEl    = document.getElementById('race-hud');
+var hudTimer = document.getElementById('hud-timer');
+var hudDeltas= document.getElementById('hud-deltas');
+
+function renderDeltas(pb, wr, cur) {
+  hudDeltas.innerHTML = '';
+  if (pb !== null && pb !== undefined) {
+    var d = cur - pb;
+    var div = document.createElement('div');
+    div.className   = 'hud-delta' + (d > 0 ? ' behind' : '');
+    div.textContent = 'PB ' + (d >= 0 ? '+' : '') + d.toFixed(3);
+    hudDeltas.appendChild(div);
+  }
+  if (wr !== null && wr !== undefined) {
+    var d2  = cur - wr;
+    var div2 = document.createElement('div');
+    div2.className   = 'hud-delta wr';
+    div2.textContent = 'WR ' + (d2 >= 0 ? '+' : '') + d2.toFixed(3);
+    hudDeltas.appendChild(div2);
+  }
+}
+
+// ── Countdown ─────────────────────────────────────────────
+var countdownEl  = document.getElementById('countdown');
+var countdownNum = document.getElementById('countdown-num');
+
+// ── Message handler ───────────────────────────────────────
+window.addEventListener('message', function(e) {
+  var msg = e.data;
+
+  if (msg.type === 'lb:show') {
+    renderLB(msg.title, msg.isSurvival, msg.entries);
+    lbEl.style.display = 'block';
+    return;
+  }
+  if (msg.type === 'lb:hide') {
+    lbEl.style.display = 'none';
+    return;
+  }
+
+  if (msg.type === 'hud:tick') {
+    hudEl.style.display = 'flex';
+    // Update base values for interpolation
+    timerRunning   = true;
+    timerBase      = msg.time;
+    timerBaseStamp = performance.now();
+    renderDeltas(msg.pb, msg.wr, msg.time);
+    return;
+  }
+  if (msg.type === 'hud:hide') {
+    hudEl.style.display = 'none';
+    timerRunning = false;
+    return;
+  }
+
+  if (msg.type === 'finish:show') {
+    var isSurv = msg.isSurvival;
+    var titleEl = document.getElementById('finish-title');
+    titleEl.textContent = isSurv ? 'SURVIVAL OVER' : 'TRIAL COMPLETE';
+    titleEl.className   = 'finish-title ' + (isSurv ? 'survival' : 'complete');
+    document.getElementById('finish-time').textContent = fmtTime(msg.time);
+    document.getElementById('finish-car').textContent  = msg.vehicle ? 'IN: ' + msg.vehicle : '';
+    document.getElementById('finish-pb').textContent   = msg.isPb ? '★ NEW PERSONAL BEST' : '';
+    document.getElementById('finish-label').textContent = msg.trialName || 'TIME TRIAL';
+    document.getElementById('finish-screen').style.display = 'block';
+    setTimeout(function() {
+      document.getElementById('finish-screen').style.display = 'none';
+    }, 5000);
+    return;
+  }
+
+  if (msg.type === 'countdown:show') {
+    countdownNum.textContent = msg.num;
+    countdownNum.style.animation = 'none';
+    void countdownNum.offsetWidth;
+    countdownNum.style.animation = '';
+    countdownEl.style.display = 'block';
+    return;
+  }
+  if (msg.type === 'countdown:hide') {
+    countdownEl.style.display = 'none';
+    return;
+  }
+
+  if (msg.type === 'prompt:show') {
+    var pt = document.getElementById('prompt-text');
+    pt.innerHTML = '<span>E</span> TO START ' + msg.label;
+    document.getElementById('prompt').style.display = 'block';
+    return;
+  }
+  if (msg.type === 'cancel:show') {
+    document.getElementById('cancel-prompt').style.display = 'block';
+    return;
+  }
+  if (msg.type === 'cancel:hide') {
+    document.getElementById('cancel-prompt').style.display = 'none';
+    return;
+  }
+  if (msg.type === 'prompt:hide') {
+    document.getElementById('prompt').style.display = 'none';
+    return;
+  }
+});
+</script>
+</body>
+</html>
